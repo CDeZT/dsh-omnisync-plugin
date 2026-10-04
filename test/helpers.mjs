@@ -63,8 +63,12 @@ export function nativeGit({ timeoutMs = 30_000, encoding } = {}) {
 
 /** 直接跑一条 git 并要 stdout（搭台用；断言仍应走被测代码）。
  *  args 优先：多数调用点用 `-C <dir>` 自带工作目录，无需再传 cwd。 */
-export async function gitOut(args, { cwd } = {}) {
-  return String((await exec('git', ['-c', 'credential.helper=', ...args], { cwd })).stdout).trim()
+export async function gitOut(args, { cwd, env } = {}) {
+  const opts = { cwd }
+  // env 是**叠加**在父环境上的（与 DSH subprocess 同语义）—— 用于验证
+  // "按 GIT_ENV_SCRUB 构造的 env 能不能被真 git 接受"。
+  if (env !== undefined) opts.env = { ...process.env, ...env }
+  return String((await exec('git', ['-c', 'credential.helper=', ...args], opts)).stdout).trim()
 }
 
 /** GitBackend 的标准测试构造（固定身份 + 真 runner）。 */

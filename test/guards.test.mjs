@@ -226,3 +226,31 @@ test('守卫: 仓库输入归一（接受 URL / git@ / .git / 空格，拒绝多
     assert.equal(normalizeRepo(bad), null, `${JSON.stringify(bad)} 必须被拒`)
   }
 })
+
+/* ── 不变量 14：绝不能把路径型 GIT_* 置空（置空 = 弄坏 git）────────────
+   删掉会怎样：线上真实故障 —— `GIT_WORK_TREE=''` 让 `git init` 报
+   "The empty string is not a valid path"，插件首次引导直接失败。
+   更险的是 `GIT_INDEX_FILE=''`：**不报错**，但索引变空 → 所有文件显示为已删除
+   → 会让插件提交一次大规模误删。 */
+
+test('守卫: 路径型 GIT_* 绝不出现在置空清单里（并真的能被 git 接受）', async (t) => {
+  const { GIT_ENV_SCRUB, GIT_ENV_FORBIDDEN } = await import('../lib/git.mjs')
+  // ① 两张表不许重叠 —— 重叠就意味着又把这些变量喂成空串。
+  for (const k of GIT_ENV_FORBIDDEN) {
+    assert.ok(!GIT_ENV_SCRUB.includes(k), `${k} 绝不能出现在置空清单里（置空会让 git 报错或索引变空）`)
+  }
+  assert.ok(GIT_ENV_FORBIDDEN.includes('GIT_DIR') && GIT_ENV_FORBIDDEN.includes('GIT_INDEX_FILE'))
+
+  // ② 行为验证：按"可置空清单"构造 env 跑真 git，必须成功。
+  //    （只断言表内容是不够的 —— 那样重构一下变量名就失效了。）
+  const { tmpRoot, gitOut, writeAt } = await import('./helpers.mjs')
+  const root = await tmpRoot(t, 'omni-gitenv-')
+  const env = Object.fromEntries(GIT_ENV_SCRUB.map((k) => [k, '']))
+  await gitOut(['init', '-q', '-b', 'main'], { cwd: root, env })
+  await writeAt(`${root}/a.txt`, 'x')
+  await gitOut(['add', '-A'], { cwd: root, env })
+  const st = await gitOut(['status', '--porcelain'], { cwd: root, env })
+  // 关键：索引必须是**真的**写进去了 —— 若 GIT_INDEX_FILE 被置空，
+  // 这里会看到 "D a.txt"（文件显示为已删除）而不是 "A  a.txt"。
+  assert.ok(st.includes('A  a.txt'), `索引必须正常（实际：${JSON.stringify(st)}）`)
+})

@@ -14,7 +14,7 @@ const { Context } = await peer('@deepseek-ai/cordis')
 
 const _entry = await pluginEntry()
 const { apply, resolveConfig, inject, name } = _entry ?? {}
-import { makeRunGit, GIT_ENV_SCRUB } from '../lib/git.mjs'
+import { makeRunGit, GIT_ENV_SCRUB, GIT_ENV_FORBIDDEN } from '../lib/git.mjs'
 import { fakeSubprocess, makeFakeDomain, peer, pluginEntry, skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 function dispose(ctx) {
@@ -115,7 +115,12 @@ test('安全铁律: git argv 以 -c credential.helper= 开头（防 osxkeychain/
   assert.equal(env.GCM_INTERACTIVE, 'never')
 })
 
-test('安全铁律: 17 个 GIT_* 变量全部被显式置空', async () => {
+test('安全铁律: 可置空的 GIT_* 被置空，路径型的**绝不置空**', async () => {
+  // ★ 这条测试原本断言「17 个 GIT_* 全部被显式置空」，并特意要求 `GIT_DIR` 在里面
+  //   —— 它把**线上故障**当成铁律锁住了。实测：路径型变量置空不是"中和"而是喂给
+  //   git 一个非法路径。`GIT_WORK_TREE=''` → `git init` 直接报
+  //   "The empty string is not a valid path"（首次引导失败）；
+  //   `GIT_INDEX_FILE=''` 更险 —— **不报错**但索引变空，所有文件显示为已删除。
   const records = []
   const run = makeRunGit(fakeSubprocess(records), {
     gitBin: 'git', timeoutMs: 30_000, maxOutputBytes: 1024, askpassPath: '/tmp/a.sh',
@@ -123,10 +128,12 @@ test('安全铁律: 17 个 GIT_* 变量全部被显式置空', async () => {
   await run(['status'], { cwd: '/tmp' })
   const { env } = records[0]
   for (const key of GIT_ENV_SCRUB) {
-    assert.equal(env[key], '', `${key} 必须被置空（防 GIT_DIR 之类让 git 指向别处）`)
+    assert.equal(env[key], '', `${key} 应当被置空（它置空是安全的）`)
   }
-  assert.ok(GIT_ENV_SCRUB.includes('GIT_DIR'))
-  assert.ok(GIT_ENV_SCRUB.length >= 17, '清洗清单至少 17 项')
+  for (const key of GIT_ENV_FORBIDDEN) {
+    assert.ok(!(key in env), `${key} 绝不能出现在子进程 env 里（置空会弄坏 git）`)
+  }
+  assert.ok(GIT_ENV_SCRUB.length >= 12, '可置空清单至少 12 项')
 })
 
 test('安全铁律: 二进制模式走 pipe（读 blob 需要原始字节）', async () => {
