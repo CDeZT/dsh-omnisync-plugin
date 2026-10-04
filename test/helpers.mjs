@@ -272,3 +272,27 @@ export function skipWithoutPeers(peers, file) {
 export async function peer(name) {
   try { return await import(name) } catch { return {} }
 }
+
+/**
+ * 动态导入插件入口（`index.mjs`）。
+ *
+ * 为什么不能静态 import：`index.mjs → lib/config.mjs` 在**模块作用域**就要
+ * `@deepseek-ai/schemastery` 与 `dsh-storage-domain`（用它们构建 Config schema 与
+ * domain spec，这是宿主 peer 依赖，不随仓库分发）。静态 import 会在克隆出来的仓库里
+ * 直接抛 ERR_MODULE_NOT_FOUND，轮不到守卫登记跳过。
+ * @returns {Promise<object|null>} 模块命名空间；缺宿主依赖时返回 null。
+ */
+export async function pluginEntry() {
+  try { return await import('../index.mjs') } catch { return null }
+}
+
+/**
+ * 缺宿主依赖时登记一条 skip 并返回 true（调用方据此提前结束）。
+ * @param {string} file
+ */
+export function skipWithoutHost(file) {
+  test(`${file}: 跳过（缺宿主依赖 @deepseek-ai/*，本机未安装 DSH）`, {
+    skip: '在 DSH 桌面端里跑：npm run dev-link（把宿主的 node_modules 链进来）后再 npm test',
+  }, () => {})
+  return true
+}

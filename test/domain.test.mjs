@@ -21,8 +21,9 @@ const { defineDomain, domainTable, descriptorOf } = await peer('@deepseek-ai/dsh
 import { z } from 'zod'
 
 import { emptyState, migrateState, deriveDeviceId, pushHistory } from '../lib/state.mjs'
-import { omnisyncDomainSpec } from '../index.mjs'
-import { peer, skipWithoutPeers, tmpRoot } from './helpers.mjs'
+const _entry = await pluginEntry()
+const { omnisyncDomainSpec } = _entry ?? {}
+import { peer, pluginEntry, skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 const tick = (ms) => new Promise((r) => setTimeout(r, ms))
 

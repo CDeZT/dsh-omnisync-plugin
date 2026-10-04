@@ -6,8 +6,10 @@ desktop 桌面端"。
 
 - 平台：macOS + Windows（desktop profile 专用，不使用 web profile）
 - 通道：GitHub 私有仓库（HTTPS + fine-grained PAT）
-- 代码：纯 ESM JavaScript，**零构建**，`lib/` 零 DSH 依赖（全部可单测）
-- 依赖：仅 `node:` 内建 + `@deepseek-ai/*` peer（不引第三方运行时库）
+- 代码：纯 ESM JavaScript，**零构建**
+- 依赖：`node:` 内建 + `@deepseek-ai/*` peer（**不引任何第三方运行时库**，仅 `zod` 用于 schema）
+- `lib/` 里只有 `config.mjs`（构建 Config schema / domain spec）与 `tools.mjs`（`defineTool`）
+  需要宿主包；**其余 27 个模块零宿主依赖、可脱离 DSH 单测**
 
 ---
 
@@ -77,6 +79,19 @@ dsh plugin --profile desktop add file:<克隆目录的绝对路径>
 > **装完必须完整重启桌面端**：DSH 的热重载只重新 import 插件入口 `index.mjs`，
 > `lib/**` 会留在 ESM 缓存里（磁盘是新版、进程是旧版）。重装**无效**，必须退出应用再打开。
 > 用 `npm run verify:install -- --live` 可以检测这个状态。
+
+### 在克隆出来的仓库里跑测试
+
+`@deepseek-ai/*` 是**宿主提供的 peer 依赖，不随本仓库分发**。所以刚从 GitHub 克隆下来时：
+
+```
+npm test          # 需要宿主的 node_modules
+npm run dev-link  # 先把宿主的 node_modules 链进来（在装了 DSH 的机器上）
+```
+
+没有宿主依赖时，受影响的测试文件会**整份登记一条 skip 并说清怎么补**，而不是抛
+`ERR_MODULE_NOT_FOUND`（那看着像插件坏了，其实只是缺宿主）。纯逻辑模块（合并内核、
+路径、脱敏、加密、会话裁决…）不依赖宿主，**任何机器上都能直接跑**。
 
 ### Windows 注意
 

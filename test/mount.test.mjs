@@ -12,9 +12,10 @@ import { join } from 'node:path'
 
 const { Context } = await peer('@deepseek-ai/cordis')
 
-import { apply, resolveConfig, inject, name } from '../index.mjs'
+const _entry = await pluginEntry()
+const { apply, resolveConfig, inject, name } = _entry ?? {}
 import { makeRunGit, GIT_ENV_SCRUB } from '../lib/git.mjs'
-import { fakeSubprocess, makeFakeDomain, peer, skipWithoutPeers, tmpRoot } from './helpers.mjs'
+import { fakeSubprocess, makeFakeDomain, peer, pluginEntry, skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 function dispose(ctx) {
   // cordis 版本差异：能用 dispose 就用，否则依赖 GC（测试进程内无害）。

@@ -21,7 +21,7 @@ import { mountTools } from '../lib/tools.mjs'
 import { mountRoutes } from '../lib/routes.mjs'
 import { makeRebuildDeps } from '../lib/deps.mjs'
 import { emptyState } from '../lib/state.mjs'
-import { skipWithoutPeers } from './helpers.mjs'
+import { pluginEntry, skipWithoutPeers } from './helpers.mjs'
 
 /* ── ① 对外 API 与抽出去的工厂 ── */
 
