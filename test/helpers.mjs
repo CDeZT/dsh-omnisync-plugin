@@ -259,3 +259,16 @@ export function skipWithoutPeers(peers, file) {
   test(`${file}: 跳过（缺宿主 peer 依赖：${missing.join(', ')}）`, { skip: `在 DSH 桌面端里跑：dsh plugin --profile desktop add file:<本仓库路径>，或把宿主 node_modules 链进来（npm run dev-link）` }, () => {})
   return true
 }
+
+/**
+ * 动态加载宿主 peer 依赖 —— **必须在守卫之前不抛**。
+ *
+ * 为什么不能静态 import：ESM 的静态 import 在模块求值**之前**执行，所以
+ * `import { Context } from '@deepseek-ai/cordis'` 在克隆出来的仓库里会直接
+ * 抛 ERR_MODULE_NOT_FOUND，**轮不到** `skipWithoutPeers` 登记跳过。改成
+ * 顶层 await 的动态导入后，缺依赖只会得到空对象 + 一条清晰的 skip。
+ * @returns {Promise<object>} 模块命名空间；缺依赖时返回空对象。
+ */
+export async function peer(name) {
+  try { return await import(name) } catch { return {} }
+}

@@ -9,7 +9,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { Context } from '@deepseek-ai/cordis'
+const { Context } = await peer('@deepseek-ai/cordis')
 
 import { apply } from '../index.mjs'
 import { NAMESPACE, STATE_KEY } from '../lib/constants.mjs'
@@ -19,7 +19,7 @@ import { Engine, STATES, backoffFor } from '../lib/engine.mjs'
 import { makeFsDeps } from '../lib/workspace.mjs'
 import { runCommand } from '../lib/command.mjs'
 import { registerRoutes } from '../lib/routes.mjs'
-import { skipWithoutPeers, tmpRoot } from './helpers.mjs'
+import { peer, skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 /**
  * Engine 的纯 DI 桩。calls 记录**发生顺序** —— "确认门必须先于落盘"

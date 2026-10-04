@@ -10,11 +10,11 @@ import { mkdtemp, rm, readFile, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { Context } from '@deepseek-ai/cordis'
+const { Context } = await peer('@deepseek-ai/cordis')
 
 import { apply, resolveConfig, inject, name } from '../index.mjs'
 import { makeRunGit, GIT_ENV_SCRUB } from '../lib/git.mjs'
-import { fakeSubprocess, makeFakeDomain, skipWithoutPeers, tmpRoot } from './helpers.mjs'
+import { fakeSubprocess, makeFakeDomain, peer, skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 function dispose(ctx) {
   // cordis 版本差异：能用 dispose 就用，否则依赖 GC（测试进程内无害）。

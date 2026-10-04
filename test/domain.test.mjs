@@ -13,16 +13,16 @@ import { mkdtemp, rm, readdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { Context } from '@deepseek-ai/cordis'
-import * as storageHub from '@deepseek-ai/dsh-storage'
-import * as storageJson from '@deepseek-ai/dsh-storage-json'
-import * as storageDomain from '@deepseek-ai/dsh-storage-domain'
-import { defineDomain, domainTable, descriptorOf } from '@deepseek-ai/dsh-storage-domain'
+const { Context } = await peer('@deepseek-ai/cordis')
+const storageHub = await peer('@deepseek-ai/dsh-storage')
+const storageJson = await peer('@deepseek-ai/dsh-storage-json')
+const storageDomain = await peer('@deepseek-ai/dsh-storage-domain')
+const { defineDomain, domainTable, descriptorOf } = await peer('@deepseek-ai/dsh-storage-domain')
 import { z } from 'zod'
 
 import { emptyState, migrateState, deriveDeviceId, pushHistory } from '../lib/state.mjs'
 import { omnisyncDomainSpec } from '../index.mjs'
-import { skipWithoutPeers, tmpRoot } from './helpers.mjs'
+import { peer, skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 const tick = (ms) => new Promise((r) => setTimeout(r, ms))
 
