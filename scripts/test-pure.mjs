@@ -16,7 +16,15 @@ const ROOT = new URL('..', import.meta.url).pathname
 const TEST_DIR = join(ROOT, 'test')
 
 /** 需要宿主或第三方依赖的模块（静态 import 链里出现这些即排除）。 */
-const HOST_MARKERS = [/from '@deepseek-ai\//u, /from 'zod'/u, /from '\.\.\/index\.mjs'/u, /from '\.\.\/lib\/tools\.mjs'/u, /from '\.\.\/lib\/config\.mjs'/u]
+// 精确锚定"插件入口 / 需要宿主的两个 lib 模块" —— 静态与动态 import 都要认。
+// ★ 别用宽松的 /index\.mjs'/：它会命中 `lib/mergers/index.mjs`，把纯逻辑测试误伤掉
+//   （实测一次误伤 10 个文件）。锚定 `../index.mjs` 这个具体路径才对。
+const HOST_MARKERS = [
+  /(?:from|import\()\s*'@deepseek-ai\//u,
+  /(?:from|import\()\s*'zod'/u,
+  /(?:from|import\()\s*'\.\.\/index\.mjs'/u,
+  /(?:from|import\()\s*'\.\.\/lib\/(?:tools|config)\.mjs'/u,
+]
 
 /** 递归找静态 import 是否触及宿主依赖（只看 test/ 与 lib/ 的一跳链）。 */
 function needsHost(file, seen = new Set()) {
