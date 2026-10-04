@@ -197,6 +197,8 @@ window.__ModuleLoader__.load({
       var [repo, setRepo] = React.useState(d.repo || '')
       var [pw, setPw] = React.useState('')
       var step = d.repo === '' ? 1 : (d.passphraseConfigured ? 3 : 2)
+      // 同步的两个前置条件（与上面 step 判定同源，避免两处口径漂移）。
+      var ready = d.repo !== '' && d.passphraseConfigured === true
 
       var head = function (n, title) {
         var active = step === n
@@ -247,13 +249,21 @@ window.__ModuleLoader__.load({
           : summary(d.passphraseConfigured ? (d.passphraseFromEnv ? t('已由环境变量提供') : t('已保存到本机 0600 文件')) : t('未设置')),
 
         // ③ 首次同步方向
+        // ★ 按钮**不再用 step === 3 门控**：那样在口令未配时按钮根本不渲染，
+        //   用户只看到一行"等待首次同步"文字，会以为"按钮点不了"（真机反馈）。
+        //   现在恒渲染，缺前置条件时**禁用并写明缺什么**。
         head(3, t('首次同步')),
-        step === 3 ? h('div', { style: { margin: '0 0 4px 28px' } },
-          h('div', Object.assign({}, S.label, { marginBottom: 8 }), t('第一台机器选「推送」（把本机铺上云）；新机器选「拉取」（把云落到本机）。')),
+        h('div', { style: { margin: '0 0 4px 28px' } },
+          h('div', Object.assign({}, S.label, { marginBottom: 8 }),
+            ready
+              ? t('第一台机器选「推送」（把本机铺上云）；新机器选「拉取」（把云落到本机）。')
+              : t('还不能同步：' + (d.repo === '' ? '先在第 ① 步填好仓库' : '口令至少要 8 位（第 ② 步）') + '。')),
           h('div', { style: S.btnRow },
-            h('button', { style: S.btnPrimary, disabled: busy, onClick: function () { act(function () { return call('/sync', { mode: 'push' }) }) } }, t('我是第一台，推送')),
-            h('button', { style: S.btn, disabled: busy, onClick: function () { act(function () { return call('/sync', { mode: 'pull' }) }) } }, t('我是新机器，拉取'))))
-          : summary(d.lastSyncedAt ? t('已完成首次同步') : t('等待首次同步')))
+            h('button', { style: S.btnPrimary, disabled: busy || !ready, onClick: function () { act(function () { return call('/sync', { mode: 'push' }) }) } }, t('我是第一台，推送')),
+            h('button', { style: S.btn, disabled: busy || !ready, onClick: function () { act(function () { return call('/sync', { mode: 'pull' }) }) } }, t('我是新机器，拉取'))),
+          d.lastSyncedAt
+            ? h('div', Object.assign({}, S.label, { marginTop: 6, color: '#1a7f37' }), t('已完成首次同步（' + new Date(d.lastSyncedAt).toLocaleString() + '）'))
+            : null))
     }
 
     /**

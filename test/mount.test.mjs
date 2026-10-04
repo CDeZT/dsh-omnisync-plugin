@@ -304,7 +304,14 @@ test('契约: 路由依赖的 api 方法必须全部存在（防跨文件契约�
   ctx.provide('commands', { register: () => () => {} })
   ctx.provide('storageDomain', { open: () => Promise.resolve(makeFakeDomain()) })
   ctx.provide('webServer', { register: (def) => { registered.push(def); return () => {} } })
-  ctx.plugin({ name: 't', apply: (c) => apply(c, { repo: '' }) })
+  // ★ 口令文件必须指向**隔离路径**：默认值会去读开发机真实的
+  //   `~/.dsh/omnisync/passphrase.vault`，于是"未设口令应为 false"这条断言
+  //   在**设过口令的机器上必然失败** —— 测试不该依赖开发者的机器状态。
+  const passDir = await mkdtemp(join(tmpdir(), 'omni-route-'))
+  ctx.plugin({
+    name: 't',
+    apply: (c) => apply(c, { repo: '', passphraseFile: join(passDir, 'passphrase.vault') }),
+  })
   await new Promise((r) => setTimeout(r, 40))
 
   assert.ok(registered.length >= 6, `应注册 ≥6 条路由（实际 ${registered.length}）`)
