@@ -1,0 +1,61 @@
+# @cdezt/dsh-omnisync bundle patch: mount the full-state sync plugin on the
+# desktop profile.
+#
+# Every key below is a Config field (Schemastery schema); invalid values fail
+# the profile load loudly. All defaults are the SAFE side — unattended
+# operation is the result of explicitly opting in, never the default.
+- insert:
+    - id: omnisync
+      name: '@cdezt/dsh-omnisync'
+      config:
+        enabled: true
+
+        # ── 远端（GitHub 私仓）────────────────────────────────────
+        # 留空 = 未配置：插件挂载但不同步，等待设置页向导完成引导。
+        # 形态 owner/repo（如 CDeZT/dsh-omnisync）。
+        repo: ''
+        branch: main
+        # PAT 存放文件（相对 $DSH_HOME）：0600，永不进同步通道。
+        tokenFile: 'omnisync/github.token'
+        # 密文口令存放（相对 $DSH_HOME）：同样永不同步。
+        vaultFile: 'omnisync/passphrase.vault'
+
+        # ── 触发（scheduler）─────────────────────────────────────
+        # 定时分钟数（0 = 关闭；5..1440）。默认 15。
+        intervalMinutes: 15
+        # DSH 启动后延迟多少秒跑第一轮（防启动拥塞）。默认 30。
+        startupDelaySeconds: 30
+        # 每轮 turn 结束后是否推送会话镜像（仅 mirror 分支，不碰配置）。
+        pushOnTurnEnd: false
+
+        # ── 确认门（用户决策：默认 first-run）────────────────────
+        # auto       一切自动（首次启用仍必须确认，不可降级）
+        # first-run  首次同步确认一次，之后无感
+        # always     每次写本机前都问
+        confirmLevel: 'first-run'
+        # 模型工具（omni_sync_push/pull）触发时永远过确认门。
+        toolConfirm: true
+
+        # ── 内容范围（默认全选 = 用户"全部打包"决策）─────────────
+        syncSessions: true
+        syncAttachments: true
+        syncSkills: true
+        syncKeybindings: true
+
+        # 密钥六分组（默认全开；关掉 = 该组只留本机，不进通道）
+        secretGroups:
+          providerKeys: true
+          mcpEnv: true
+          oauthGrants: true
+          pluginTokens: true
+          secretsDir: true
+          homeEnv: true
+
+        # ── 引擎参数 ─────────────────────────────────────────────
+        # git 单命令超时 ms。
+        gitTimeoutMs: 120000
+        # 会话镜像的分支名（与配置流分开，独立追加语义）。
+        mirrorBranch: 'mirror/sessions'
+        # 每次写本机前的自动备份保留份数。
+        backupKeep: 5
+        # deviceId 来源（hostname+platform 哈希 8 位；存 storageDomain）。

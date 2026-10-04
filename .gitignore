@@ -1,0 +1,18 @@
+# 依赖（本插件零第三方运行时依赖；node_modules 是 dev-link 产物）
+node_modules/
+
+# 日志与临时文件
+*.log
+*.tmp
+*.lock
+
+# 本机运维产物（绝不入库）
+omnisync/
+backup-*/
+install-backup-*/
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

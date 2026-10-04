@@ -1,0 +1,91 @@
+{
+  "name": "@cdezt/dsh-omnisync",
+  "version": "0.9.0",
+  "description": "DeepSeek Harness 桌面端全量云同步插件：把 $DSH_HOME 的全部持久状态同步到一个 GitHub 私有仓库（或网盘目录），仿佛 DSH 部署在云主机。",
+  "type": "module",
+  "main": "./index.mjs",
+  "types": "./types.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types.d.ts",
+      "default": "./index.mjs"
+    },
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.mjs",
+    "client.js",
+    "types.d.ts",
+    "lib/",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.4",
+    "@deepseek-ai/dsh-commands": ">=0.2.0-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-plugin-manager": ">=0.2.0-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-storage-domain": ">=0.2.0-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-subprocess": ">=0.2.0-rc.1 <0.3.0",
+    "@deepseek-ai/dsh-tools": ">=0.2.0-rc.1 <0.3.0",
+    "@deepseek-ai/schemastery": "^3.18.4"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/dsh-commands": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-plugin-manager": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-storage-domain": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-subprocess": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "3.18.4",
+    "zod": "4.6.5"
+  },
+  "scripts": {
+    "dev-link": "node scripts/dev-link.mjs",
+    "pretest": "node scripts/dev-link.mjs",
+    "test": "node --test \"test/*.test.mjs\"",
+    "verify": "node scripts/verify-real-home.mjs",
+    "verify:install": "node scripts/verify-install.mjs",
+    "coverage": "node scripts/coverage.mjs",
+    "audit": "node scripts/audit.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "sync",
+    "cloud-sync",
+    "plugin",
+    "cordis",
+    "github-sync"
+  ],
+  "engines": {
+    "node": "^22.0.0 || >=24.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CDeZT/dsh-omnisync-plugin.git"
+  },
+  "homepage": "https://github.com/CDeZT/dsh-omnisync-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/CDeZT/dsh-omnisync-plugin/issues"
+  }
+}
