@@ -254,3 +254,33 @@ test('守卫: 路径型 GIT_* 绝不出现在置空清单里（并真的能被 g
   // 这里会看到 "D a.txt"（文件显示为已删除）而不是 "A  a.txt"。
   assert.ok(st.includes('A  a.txt'), `索引必须正常（实际：${JSON.stringify(st)}）`)
 })
+
+/* ── 不变量 15：仓库目录不存在时必须能自建（cwd 不存在 = spawn ENOENT）──
+   删掉会怎样：全新机器首次引导失败，且报的是 `spawn git ENOENT`
+   （看着像 git 没装），而不是"目录不存在"。 */
+
+test('守卫: ensureRepo 必须在第一次 git 调用前建好仓库目录', async (t) => {
+  const { GitBackend, GIT_ENV_SCRUB, GIT_ENV_FORBIDDEN } = await import('../lib/git.mjs')
+  const { tmpRoot, nativeGit } = await import('./helpers.mjs')
+  const root = await tmpRoot(t, 'omni-ensurerepo-')
+  const repoDir = `${root}/nested/does/not/exist/yet`
+  const run = nativeGit()
+  const be = new GitBackend({ repoDir, remote: `${root}/remote.git`, branch: 'main', run })
+  // 目录**不存在**时直接 bootstrap：必须自建成功，而不是 spawn ENOENT。
+  await assert.doesNotReject(() => be.ensureRepo(), '目录不存在时必须能自建（mkdir 要在 isRepo 之前）')
+  assert.equal(await be.isRepo(), true, 'bootstrap 后必须真的是个仓库')
+
+  // 顺带把"可置空清单"整体过一遍**写操作序列** —— 只读命令验不出 GIT_CONFIG 那类问题
+  // （`GIT_CONFIG=''` 只在写配置时才暴露：could not write config file : Is a directory）。
+  const env = Object.fromEntries(GIT_ENV_SCRUB.map((k) => [k, '']))
+  const { gitOut, writeAt } = await import('./helpers.mjs')
+  const w = `${root}/wtest`
+  await gitOut(['init', '-q', '-b', 'main', w], { env })
+  await gitOut(['-C', w, 'config', 'core.autocrlf', 'false'], { env })
+  await gitOut(['-C', w, 'config', 'user.email', 't@t'], { env })
+  await writeAt(`${w}/a.txt`, 'x')
+  await gitOut(['-C', w, 'add', '-A'], { env })
+  const st = await gitOut(['-C', w, 'status', '--porcelain'], { env })
+  assert.ok(st.includes('A  a.txt'), `索引必须正常（实际：${JSON.stringify(st)}）`)
+  for (const k of GIT_ENV_FORBIDDEN) assert.ok(!GIT_ENV_SCRUB.includes(k), `${k} 不得在可置空清单里`)
+})

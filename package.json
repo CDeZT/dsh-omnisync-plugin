@@ -1,6 +1,6 @@
 {
   "name": "@cdezt/dsh-omnisync",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "description": "DeepSeek Harness 桌面端全量云同步插件：把 $DSH_HOME 的全部持久状态同步到一个 GitHub 私有仓库（或网盘目录），仿佛 DSH 部署在云主机。",
   "type": "module",
   "main": "./index.mjs",
