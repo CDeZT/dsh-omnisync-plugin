@@ -218,7 +218,12 @@ window.__ModuleLoader__.load({
         step === 1 ? h('div', { style: S.grid },
           h('a', { target: '_blank', rel: 'noreferrer', style: S.label,
             href: 'https://github.com/settings/personal-access-tokens/new?name=dsh-omnisync&description=DSH%20full-state%20sync&expires_in=366' },
-          t('→ 打开 GitHub 预填页面（只勾这一个仓库的 Contents 读写）')),
+          t('→ 打开 GitHub 令牌页面（已预填名称与有效期）')),
+          // ★ 别写"只勾这一个仓库"那种暗示已选好的话：GitHub 的 fine-grained PAT
+          //   页面**不支持**用 URL 预选仓库与权限（只认 name/description/expires_in）。
+          //   这两步必须用户手动做，所以直接写出来，并说明为什么是最小权限。
+          h('div', Object.assign({}, S.label, { opacity: 0.75, lineHeight: 1.6 }),
+            t('页面上还需手动做两件事：① Repository access 选「Only select repositories」并只勾你要同步的那个仓库；② Permissions → Contents 设为「Read and write」，其余一律不给。')),
           h('input', { style: S.input, type: 'password', placeholder: t('粘贴令牌（只存本机 0600，绝不上云）'), value: token, onChange: function (e) { setToken(e.target.value) } }),
           h('input', { style: S.input, placeholder: t('仓库 owner/repo'), value: repo, onChange: function (e) { setRepo(e.target.value) } }),
           h('button', { style: S.btnPrimary, disabled: busy || token.trim() === '' || repo.trim() === '',
