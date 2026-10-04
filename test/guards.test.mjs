@@ -205,3 +205,24 @@ test('守卫: 家目录解析必须回退到 USERPROFILE / os.homedir（Windows 
     if (real.USERPROFILE === undefined) delete process.env.USERPROFILE; else process.env.USERPROFILE = real.USERPROFILE
   }
 })
+
+/* ── 不变量 13：仓库输入必须接受用户自然会粘的写法 ───────────────────
+   删掉会怎样：用户在"仓库"框里粘浏览器地址（最自然的操作）→ 报
+   `repo must be owner/name` —— 把实现细节推给用户。 */
+
+test('守卫: 仓库输入归一（接受 URL / git@ / .git / 空格，拒绝多段与空）', async () => {
+  const { normalizeRepo } = await import('../lib/routes.mjs')
+  const ok = [
+    ['CDeZT/dsh-omnisync', 'CDeZT/dsh-omnisync'],
+    ['https://github.com/CDeZT/dsh-omnisync', 'CDeZT/dsh-omnisync'],
+    ['https://github.com/CDeZT/dsh-omnisync.git', 'CDeZT/dsh-omnisync'],
+    ['git@github.com:CDeZT/dsh-omnisync.git', 'CDeZT/dsh-omnisync'],
+    ['github.com/CDeZT/dsh-omnisync/', 'CDeZT/dsh-omnisync'],
+    ['  CDeZT/dsh-omnisync  ', 'CDeZT/dsh-omnisync'],
+  ]
+  for (const [input, want] of ok) assert.equal(normalizeRepo(input), want, `${input} 应归一为 ${want}`)
+  // 非法形态必须拒绝 —— 尤其 `a/b/c`（曾因无条件丢首段被误收成 `b/c`）。
+  for (const bad of ['a/b/c', 'bad', '', '   ', 'owner/', '/name', 'https://github.com/only-one']) {
+    assert.equal(normalizeRepo(bad), null, `${JSON.stringify(bad)} 必须被拒`)
+  }
+})
