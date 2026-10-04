@@ -236,8 +236,14 @@ window.__ModuleLoader__.load({
         step === 2 ? h('div', { style: S.grid },
           h('div', { style: S.label }, t('用于加密凭据与密钥。丢了不致命：云端密文作废，但本机明文还在，重新推送即可重建。')),
           h('input', { style: S.input, type: 'password', placeholder: t('口令（建议 16 位以上）'), value: pw, onChange: function (e) { setPw(e.target.value) } }),
+          // ★ 按钮"变灰但不说明原因"= 用户以为按钮坏了。少于 8 位时直接把原因写在旁边。
+          pw.trim().length > 0 && pw.trim().length < 8
+            ? h('div', Object.assign({}, S.label, { color: '#c00' }), t('口令至少 8 位（当前 ' + pw.trim().length + ' 位）'))
+            : null,
           h('button', { style: S.btnPrimary, disabled: busy || pw.trim().length < 8,
-            onClick: function () { act(function () { return call('/passphrase', { passphrase: pw.trim() }) }) } }, t('保存口令')))
+            onClick: function () { act(function () { return call('/passphrase', { passphrase: pw.trim() }) }) } }, t('保存口令')),
+          h('div', Object.assign({}, S.label, { marginTop: 4, opacity: 0.75 }),
+            t('两台机器必须用同一个口令；不设也可以，但凭据/密钥就只留本机、不上云。')))
           : summary(d.passphraseConfigured ? (d.passphraseFromEnv ? t('已由环境变量提供') : t('已保存到本机 0600 文件')) : t('未设置')),
 
         // ③ 首次同步方向

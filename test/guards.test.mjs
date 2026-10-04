@@ -284,3 +284,44 @@ test('守卫: ensureRepo 必须在第一次 git 调用前建好仓库目录', as
   assert.ok(st.includes('A  a.txt'), `索引必须正常（实际：${JSON.stringify(st)}）`)
   for (const k of GIT_ENV_FORBIDDEN) assert.ok(!GIT_ENV_SCRUB.includes(k), `${k} 不得在可置空清单里`)
 })
+
+/* ── 不变量 16：remote 必须是运行期取值，且"验证"必须真联网 ──────────
+   删掉会怎样：真机症状 —— 插件启动时 repo 为空 → remote 固化成
+   `https://github.com/.git`；用户在 UI 填好仓库名后 bootstrap 比较
+   `current !== remote` 两边相同 → **永不修正**，之后每轮同步都
+   `repository 'https://github.com/.git/' not found`。
+   而 UI 的「验证并保存」还会报成功，因为 bootstrap **零网络操作**。 */
+
+test('守卫: remote 支持运行期取值（启动后改仓库名必须生效）', async (t) => {
+  const { GitBackend } = await import('../lib/git.mjs')
+  const { tmpRoot, nativeGit } = await import('./helpers.mjs')
+  const root = await tmpRoot(t, 'omni-remote-')
+  const repoDir = `${root}/repo`
+  let current = '' // 模拟 cfg.repo：启动时为空，之后被 UI 改动
+  const be = new GitBackend({
+    repoDir, branch: 'main', run: nativeGit(),
+    remote: () => `https://github.com/${current}.git`,
+  })
+  await be.ensureRepo()
+  current = 'CDeZT/dsh-omnisync'   // ← UI 填好仓库名
+  await be.bootstrap()             // 必须把 remote 修正过来
+  const { gitOut } = await import('./helpers.mjs')
+  const url = await gitOut(['-C', repoDir, 'remote', 'get-url', 'origin'])
+  assert.equal(url, 'https://github.com/CDeZT/dsh-omnisync.git',
+    'bootstrap 必须把固化的错误 remote 修正成当前仓库名')
+})
+
+test('守卫: 远端不可达时 verify 必须失败（bootstrap 零网络操作，不能当验证）', async (t) => {
+  const { GitBackend } = await import('../lib/git.mjs')
+  const { tmpRoot, nativeGit } = await import('./helpers.mjs')
+  const root = await tmpRoot(t, 'omni-probe-')
+  const be = new GitBackend({
+    repoDir: `${root}/repo`, branch: 'main', run: nativeGit(),
+    // 指向一个不存在的仓库：bootstrap 会"成功"（纯本地），probeRemote 必须失败。
+    remote: () => 'https://github.com/CDeZT/definitely-not-a-real-repo-xyzzy.git',
+  })
+  await assert.doesNotReject(() => be.bootstrap(), 'bootstrap 是纯本地动作，不该失败')
+  const probe = await be.probeRemote()
+  assert.equal(probe.ok, false, 'probeRemote 必须真的联网并报告失败')
+  assert.ok(typeof probe.error === 'string' && probe.error.length > 0, '必须给出可读错误')
+})

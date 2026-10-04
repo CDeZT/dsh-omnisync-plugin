@@ -14,6 +14,7 @@
 
 import { LIB_REV, PACKAGE_NAME, PLUGIN_NAME, STATE_KEY } from './lib/constants.mjs'
 import { GitBackend, makeRunGit } from './lib/git.mjs'
+import { gitFailed } from './lib/errors.mjs'
 import { Engine } from './lib/engine.mjs'
 import { applyToWorktree, applyToLocal, ensureWorkspaceDirs } from './lib/apply.mjs'
 import { mirrorSessions, applySessionsToLocal } from './lib/sessions.mjs'
@@ -136,7 +137,9 @@ export function apply(ctx, config = {}) {
   const folderDir = cfg.folderRemote.trim() === '' ? null : abs(cfg.folderRemote)
   const makeBackend = (dir, branch) => (folderDir === null
     ? new GitBackend({
-      repoDir: abs(dir), remote: `https://github.com/${cfg.repo}.git`, branch,
+      repoDir: abs(dir), branch,
+      // 传函数：仓库名在 UI 里随时会改，字符串会被冻结在 apply() 那一刻。
+      remote: () => `https://github.com/${cfg.repo}.git`,
       commitName: cfg.commitName, commitEmail: cfg.commitEmail, timeoutMs: cfg.gitTimeoutMs, run: runner,
     })
     : makeFolderBackendDeps({
