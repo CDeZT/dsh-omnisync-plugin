@@ -65,7 +65,8 @@
     "verify": "node scripts/verify-real-home.mjs",
     "verify:install": "node scripts/verify-install.mjs",
     "coverage": "node scripts/coverage.mjs",
-    "audit": "node scripts/audit.mjs"
+    "audit": "node scripts/audit.mjs",
+    "test:pure": "node scripts/test-pure.mjs"
   },
   "keywords": [
     "dsh",

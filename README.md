@@ -85,9 +85,14 @@ dsh plugin --profile desktop add file:<克隆目录的绝对路径>
 `@deepseek-ai/*` 是**宿主提供的 peer 依赖，不随本仓库分发**。所以刚从 GitHub 克隆下来时：
 
 ```
-npm test          # 需要宿主的 node_modules
-npm run dev-link  # 先把宿主的 node_modules 链进来（在装了 DSH 的机器上）
+npm run test:pure  # ① 纯逻辑部分：20 个文件 / 386 个测试，**任何机器直接跑**（无需 DSH、无需 npm install）
+npm install        # ② 装 zod（唯一的第三方运行时依赖）
+npm run dev-link   # ③ 把宿主的 node_modules 链进来（需已安装 DSH）
+npm test           # ④ 全量 427 个测试
 ```
+
+**只想确认插件本身没坏就跑到 ① 即可** —— 那 386 个测试覆盖了合并内核、凭据解析、
+路径校验、脱敏、加密、会话裁决、附件寻址、网盘后端与全部安全守卫，是最容易出错的部分。
 
 没有宿主依赖时，受影响的测试文件会**整份登记一条 skip 并说清怎么补**，而不是抛
 `ERR_MODULE_NOT_FOUND`（那看着像插件坏了，其实只是缺宿主）。纯逻辑模块（合并内核、
