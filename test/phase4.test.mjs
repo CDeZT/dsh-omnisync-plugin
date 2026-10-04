@@ -19,10 +19,14 @@ import { rebindText, needsRebind } from '../lib/rebind.mjs'
 import { applyToWorktree, applyToLocal } from '../lib/apply.mjs'
 import { makeFsDeps } from '../lib/workspace.mjs'
 import { Engine } from '../lib/engine.mjs'
-import { tmpRoot, gitOut, nativeGit, backendFor, fsCtx, rejectsCode } from './helpers.mjs'
+import { backendFor, fsCtx, gitOut, nativeGit, rejectsCode, skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 
 /* ─────────── ① {userData} 模板 ─────────── */
+
+// 缺宿主 peer 依赖时整份跳过（而不是抛 ERR_MODULE_NOT_FOUND 误导用户）。
+const _peersMissing = skipWithoutPeers(['@deepseek-ai/cordis'], 'phase4.test.mjs')
+if (!_peersMissing) {
 
 test('缺口①: keybindings 分区必须真的可达（走遍历，不是只问 sectionForPath）', async (t) => {
   // ★ 这个测试的形态很关键。原版只做 sectionForPath(绝对路径) → keybindings，
@@ -229,3 +233,5 @@ test('缺口⑤: engine 单飞（并发调用第二个直接跳过）', async ()
   release()
   await first
 })
+
+}

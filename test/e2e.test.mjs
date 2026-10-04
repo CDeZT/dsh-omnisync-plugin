@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import { makeFsDeps, writeAtomic, walk, pruneBackups } from '../lib/workspace.mjs'
 import { applyToWorktree, applyToLocal } from '../lib/apply.mjs'
 import { sectionForPath } from '../lib/sections.mjs'
-import { tmpRoot, gitOut, backendFor, fsCtx } from './helpers.mjs'
+import { backendFor, fsCtx, gitOut, skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 /** 造一个假 $DSH_HOME（含真实形态的配置文件）。 */
 async function makeHome(root, overrides = {}) {
@@ -39,6 +39,10 @@ async function makeHome(root, overrides = {}) {
   }, null, 2))
   return root
 }
+
+// 缺宿主 peer 依赖时整份跳过（而不是抛 ERR_MODULE_NOT_FOUND 误导用户）。
+const _peersMissing = skipWithoutPeers(['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-mcp-client'], 'e2e.test.mjs')
+if (!_peersMissing) {
 
 test('e2e: A 机 push → bare 仓 → B 机 fetch，内容逐字节一致', async (t) => {
   const base = await tmpRoot(t, 'omni-e2e-')
@@ -301,3 +305,5 @@ test('守卫: 每个真实文件都必须有明确归属（逐文件，不许分
     assert.equal(isNeverSynced(rel), false, `${rel} 被硬排除误伤了`)
   }
 })
+
+}

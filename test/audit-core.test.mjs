@@ -19,7 +19,7 @@ import { Engine, STATES, backoffFor } from '../lib/engine.mjs'
 import { makeFsDeps } from '../lib/workspace.mjs'
 import { runCommand } from '../lib/command.mjs'
 import { registerRoutes } from '../lib/routes.mjs'
-import { tmpRoot } from './helpers.mjs'
+import { skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 /**
  * Engine 的纯 DI 桩。calls 记录**发生顺序** —— "确认门必须先于落盘"
@@ -51,6 +51,10 @@ function makeDeps(overrides = {}) {
 }
 
 /* ── 第 1 轮：确认门与写本机的顺序 / 取消后的状态复位 ── */
+
+// 缺宿主 peer 依赖时整份跳过（而不是抛 ERR_MODULE_NOT_FOUND 误导用户）。
+const _peersMissing = skipWithoutPeers(['@deepseek-ai/cordis'], 'audit-core.test.mjs')
+if (!_peersMissing) {
 
 test('engine: 用户拒绝确认后，状态必须复位（不能永远停在 syncing）', async () => {
   const { deps } = makeDeps({ confirm: async () => false })
@@ -385,3 +389,5 @@ test('routes: /sync 的未知 mode 归一为 sync（不把 UI 的脏值透给引
   assert.deepEqual(seen, [['sync', 'ui']], '未知 mode 必须归一为 sync')
   assert.equal(JSON.parse(res.body).data.mode, 'sync')
 })
+
+}

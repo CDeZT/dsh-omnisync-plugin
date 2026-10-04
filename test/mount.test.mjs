@@ -14,7 +14,7 @@ import { Context } from '@deepseek-ai/cordis'
 
 import { apply, resolveConfig, inject, name } from '../index.mjs'
 import { makeRunGit, GIT_ENV_SCRUB } from '../lib/git.mjs'
-import { tmpRoot, makeFakeDomain, fakeSubprocess } from './helpers.mjs'
+import { fakeSubprocess, makeFakeDomain, skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 function dispose(ctx) {
   // cordis 版本差异：能用 dispose 就用，否则依赖 GC（测试进程内无害）。
@@ -33,6 +33,10 @@ function mountCtx(config) {
   const fiber = ctx.plugin({ name: 'dsh-omnisync-test', apply: (c) => apply(c, config) })
   return { ctx, fiber, records }
 }
+
+// 缺宿主 peer 依赖时整份跳过（而不是抛 ERR_MODULE_NOT_FOUND 误导用户）。
+const _peersMissing = skipWithoutPeers(['@deepseek-ai/cordis', '@deepseek-ai/dsh-storage-domain'], 'mount.test.mjs')
+if (!_peersMissing) {
 
 test('meta: 插件名与必需服务声明', async () => {
   const { readFileSync } = await import('node:fs')
@@ -340,3 +344,5 @@ test('契约: 路由依赖的 api 方法必须全部存在（防跨文件契约�
     assert.equal(r.code, 400, `${path} 用 GET 应被拒（400），实际 ${r.code}`)
   }
 })
+
+}

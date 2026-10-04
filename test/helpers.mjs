@@ -1,3 +1,5 @@
+import { test } from 'node:test'
+import { createRequire } from 'node:module'
 // test/helpers.mjs — 19 个测试文件的共享底座（消除各自重写的 setup）。
 //
 // 为什么集中：这些 setup 原本在 19 个文件里各写一遍，改一处要改 19 处 —— 而且已经出过
@@ -228,4 +230,32 @@ export function fakeSubprocess(records) {
       }
     },
   }
+}
+
+/**
+ * 该 peer 依赖是否可解析（DSH 运行时提供，克隆下来可能没有）。
+ * 为什么需要：本插件的 peer 依赖（`@deepseek-ai/*`）由宿主 DSH 提供，**不随仓库分发**。
+ * 于是"从 GitHub 克隆后直接 `npm test`"会在 6 个文件上抛 ERR_MODULE_NOT_FOUND ——
+ * 对用户是**误导性的红**（看着像插件坏了，其实是缺宿主依赖）。这里让它们**优雅跳过**。
+ */
+export function hasPeer(name) {
+  try {
+    createRequire(import.meta.url).resolve(`${name}/package.json`)
+    return true
+  } catch {
+    try { createRequire(import.meta.url).resolve(name); return true } catch { return false }
+  }
+}
+
+/**
+ * 缺 peer 依赖时：整份文件只登记一条 **skip**，并说清怎么补。
+ * @param {string[]} peers - 该文件需要的包名。
+ * @param {string} file - 文件名（用于消息）。
+ * @returns {boolean} true = 缺依赖，调用方应立刻 return。
+ */
+export function skipWithoutPeers(peers, file) {
+  const missing = peers.filter((p) => !hasPeer(p))
+  if (missing.length === 0) return false
+  test(`${file}: 跳过（缺宿主 peer 依赖：${missing.join(', ')}）`, { skip: `在 DSH 桌面端里跑：dsh plugin --profile desktop add file:<本仓库路径>，或把宿主 node_modules 链进来（npm run dev-link）` }, () => {})
+  return true
 }

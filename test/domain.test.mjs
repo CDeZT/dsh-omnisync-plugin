@@ -22,7 +22,7 @@ import { z } from 'zod'
 
 import { emptyState, migrateState, deriveDeviceId, pushHistory } from '../lib/state.mjs'
 import { omnisyncDomainSpec } from '../index.mjs'
-import { tmpRoot } from './helpers.mjs'
+import { skipWithoutPeers, tmpRoot } from './helpers.mjs'
 
 const tick = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -87,6 +87,10 @@ function stateAccess(domain) {
     },
   }
 }
+
+// 缺宿主 peer 依赖时整份跳过（而不是抛 ERR_MODULE_NOT_FOUND 误导用户）。
+const _peersMissing = skipWithoutPeers(['@deepseek-ai/cordis', '@deepseek-ai/dsh-storage', '@deepseek-ai/dsh-storage-domain', '@deepseek-ai/dsh-storage-json'], 'domain.test.mjs')
+if (!_peersMissing) {
 
 test('domain: 真实栈上开域 + 状态往返（get 同步 / put 异步）', async (t) => {
   const root = await tmpRoot(t, 'omni-domain-')
@@ -197,3 +201,5 @@ test('守卫: 真实 schema 能往返一个完整 emptyState（含 version）', 
   assert.equal(back.version, 1)
   await d2.close()
 })
+
+}

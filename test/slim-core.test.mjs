@@ -21,8 +21,13 @@ import { mountTools } from '../lib/tools.mjs'
 import { mountRoutes } from '../lib/routes.mjs'
 import { makeRebuildDeps } from '../lib/deps.mjs'
 import { emptyState } from '../lib/state.mjs'
+import { skipWithoutPeers } from './helpers.mjs'
 
 /* ── ① 对外 API 与抽出去的工厂 ── */
+
+// 缺宿主 peer 依赖时整份跳过（而不是抛 ERR_MODULE_NOT_FOUND 误导用户）。
+const _peersMissing = skipWithoutPeers(['@deepseek-ai/cordis'], 'slim-core.test.mjs')
+if (!_peersMissing) {
 
 test('index: 声明搬到 lib/config.mjs 后，四个公开名字仍在 index.mjs 上', () => {
   for (const name of ['Config', 'resolveConfig', 'stateSchema', 'omnisyncDomainSpec']) {
@@ -251,3 +256,5 @@ test('client: Sections 列表未到达时渲染 null，到达后渲染分区开�
   panel.react.reset()
   assert.ok(sections.type(sections.props) !== undefined, '列表到达后必须渲染开关')
 })
+
+}
