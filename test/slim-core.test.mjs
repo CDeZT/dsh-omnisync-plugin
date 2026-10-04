@@ -21,7 +21,7 @@ import { mountTools } from '../lib/tools.mjs'
 import { mountRoutes } from '../lib/routes.mjs'
 import { makeRebuildDeps } from '../lib/deps.mjs'
 import { emptyState } from '../lib/state.mjs'
-import { pluginEntry, skipWithoutPeers } from './helpers.mjs'
+import { fakeSubprocess, makeFakeDomain, peer, pluginEntry, skipWithoutPeers } from './helpers.mjs'
 
 /* ── ① 对外 API 与抽出去的工厂 ── */
 
@@ -258,3 +258,59 @@ test('client: Sections 列表未到达时渲染 null，到达后渲染分区开�
 })
 
 }
+
+/* ── 路由注册契约：每条路由都必须真的能被调用 ─────────────────────────
+   为什么加这条：`/sections` 曾把**对象** `{ handler }` 传给 route()（它签名是
+   `(path, fn)`），于是每次请求都 `fn is not a function` → 500。而当时的测试只覆盖了
+   纯逻辑（sectionOf / 偏好持久化），**没有一条真的把路由跑一遍** —— 所以这个 bug
+   一路到了真机上才被用户发现。这里补上"每条路由都真调一次"的契约。 */
+
+test('契约: 每条路由都能被真实调用（不得 fn is not a function）', async () => {
+  // 直接驱动 registerRoutes，不挂载整个插件 —— 挂载会启动调度器/定时器，测试进程不退出。
+  // 这里要抓的正是"/sections 曾把对象当函数传给 route()"那类注册形态错误。
+  const { registerRoutes } = await import('../lib/routes.mjs')
+  const routes = []
+  const ws = { register(def) { routes.push(def); return () => {} } }
+  // 忠实的 req/res 桩：send() 会调 writeHead/setHeader/end，缺一个就变成
+  // "桩不够真"的假红（假 stub 比没测试更危险 —— 踩过 table.set 那次）。
+  const mkRes = () => ({
+    statusCode: 0, body: '', headers: {},
+    writeHead(code, h) { this.statusCode = code; Object.assign(this.headers, h ?? {}) },
+    setHeader(k, v) { this.headers[k] = v },
+    end(b) { this.body = b ?? '' },
+  })
+  const mkReq = (url, method) => ({
+    method, url, headers: {}, on() {},
+    [Symbol.asyncIterator]: async function* () {},
+  })
+  const api = {
+    engine: { state: 'idle', run: async () => ({ pushed: 0, pulled: 0 }), status: async () => ({}) },
+    state: async () => ({ deviceId: 'x', history: [], tombstones: {}, settings: {} }),
+    cfg: {}, repo: () => 'o/r', branch: 'main',
+    sections: () => [{ id: 'sessions', note: 'n', enabled: true }],
+    setDisabledSections: async (ids) => ids,
+    secrets: () => [], setSecretGroup: async () => {}, setConfirmLevel: async () => {},
+    remember: async () => ({}), runSync: async () => ({ pushed: 0, pulled: 0 }),
+    writeToken: async () => {}, verify: async () => {}, passphraseConfigured: () => false,
+    passphraseFromEnv: () => false, savePassphrase: async () => {}, plugins: async () => [],
+    rebuildDeps: async () => ({}),
+  }
+  registerRoutes(ws, api)
+  assert.ok(routes.length >= 6, `应注册 ≥6 条路由（实际 ${routes.length}）`)
+
+  for (const def of routes) {
+    const res = mkRes()
+    const req = mkReq(def.path, 'GET')
+    await assert.doesNotReject(() => def.handler(req, res), `${def.path} 的 handler 抛了`)
+    const parsed = JSON.parse(res.body || '{}')
+    assert.notEqual(parsed?.error?.message, 'fn is not a function', `${def.path} 注册形态不对`)
+  }
+
+  // /sections 必须返回数组（GET 读），且 POST 能改。
+  const sec = routes.find((r) => r.path.endsWith('/sections'))
+  assert.ok(sec !== undefined, '必须注册 /sections')
+  const res2 = mkRes()
+  await sec.handler(mkReq(sec.path, 'GET'), res2)
+  const data = JSON.parse(res2.body).data
+  assert.ok(Array.isArray(data) && data.length === 1, '/sections GET 必须返回分区数组')
+})
